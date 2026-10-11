@@ -1,4 +1,4 @@
-# ======================= main.py =======================
+
 import numpy as np
 import torch
 import pickle
@@ -14,10 +14,10 @@ from utils import TrnData
 import time
 from datetime import datetime
 import networkx as nx
-from scipy.sparse.linalg import eigsh  # 对称稀疏特征分解
+from scipy.sparse.linalg import eigsh  
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# 服务器/无显示环境
+
 
 import matplotlib
 matplotlib.use("Agg")
@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import orthogonal_procrustes
 from scipy.stats import gaussian_kde
 import matplotlib as mpl
-# ===== 字体设置 =====
+
 mpl.rcParams["font.family"] = "serif"
 mpl.rcParams["font.serif"] = ["Times New Roman"]
 mpl.rcParams["mathtext.fontset"] = "stix"
@@ -39,12 +39,11 @@ mpl.rcParams["axes.unicode_minus"] = False
 
 
 
-# =========================================================
-# 设备
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# 超参数
+
 d = args.d
 l = args.gnn_layer
 temp = args.temp
@@ -63,7 +62,7 @@ decay = args.decay
 svd_q = args.q
 dropout = args.dropout
 
-# 数据
+
 path = 'data/' + args.data + '/'
 with open(path + 'train.pkl', 'rb') as f:
     train = pickle.load(f)
@@ -77,7 +76,7 @@ print('user_num:', train.shape[0], 'item_num:', train.shape[1], 'lr:', lr, 'num_
 
 epoch_user = min(train.shape[0], 30000)
 
-# 邻接矩阵
+
 adj_mat = sparse.dok_matrix((train.shape[0] + train.shape[1],
                              train.shape[0] + train.shape[1]), dtype=np.float32)
 adj_mat = adj_mat.tolil()
@@ -86,7 +85,7 @@ adj_mat[:train.shape[0], train.shape[0]:] = R
 adj_mat[train.shape[0]:, :train.shape[0]] = R.T
 Graph = adj_mat.todok()
 
-# 归一化
+
 rowD = np.array(train.sum(1)).squeeze()
 colD = np.array(train.sum(0)).squeeze()
 for i in range(len(train.data)):
@@ -100,7 +99,7 @@ adj_norm = scipy_sparse_mat_to_torch_sparse_tensor(train)
 adj_norm = adj_norm.coalesce().to(device)
 print('Adj matrix normalized.')
 
-# 多尺度光谱编码
+
 print('Computing structure-aware multi-scale spectral encodings...')
 G = nx.Graph()
 n_users, n_items = train.shape[0], train.shape[1]
@@ -147,7 +146,7 @@ for t in scales:
     scaled_feats.append(Phi_t)
 Phi = np.concatenate(scaled_feats, axis=1)
 
-# Dist-HDN
+
 eps = 1e-6
 deg_all = (np.array(G.degree())[:, 1].astype(np.float32) + eps)
 deg_u = deg_all[:n_users]; deg_v = deg_all[n_users:]
@@ -173,25 +172,25 @@ os.makedirs(rms_fig_dir, exist_ok=True)
 
 
 
-# 保存度数（用于着色）
+
 user_degree = torch.tensor(deg_u, dtype=torch.float32, device=device)
 item_degree = torch.tensor(deg_v, dtype=torch.float32, device=device)
 
-# 转 tensor
+
 u_mul_s = torch.tensor(u_features, dtype=torch.float32, device=device)
 v_mul_s = torch.tensor(v_features, dtype=torch.float32, device=device)
 svd_u   = torch.tensor(u_features.T, dtype=torch.float32, device=device)
 svd_v   = torch.tensor(v_features.T, dtype=torch.float32, device=device)
 print('Spectral encodings ready.')
 
-# 测试集标签
+
 test_labels = [[] for _ in range(test.shape[0])]
 for i in range(len(test.data)):
     row = test.row[i]; col = test.col[i]
     test_labels[row].append(col)
 print('Test data processed.')
 
-# 训练准备
+
 loss_list = []; loss_r_list = []; loss_s_list = []
 recall_20_x = []; recall_20_y = []
 ndcg_20_y = []; recall_40_y = []; ndcg_40_y = []
@@ -214,15 +213,15 @@ recall20Max = 0.0; ndcg20Max = 0.0
 recall40Max = 0.0; ndcg40Max = 0.0
 bestEpoch = 0
 
-# 对齐曲线历史（核心2）
+
 cka_hist_E0G, cka_hist_E0F = [], []
 knn_hist_E0G, knn_hist_E0F = [], []
 VIS_METHOD = getattr(args, "vis_method", "pca")
 KNN_K = getattr(args, "vis_knn_k", 20)
 KNN_SAMPLE = getattr(args, "vis_knn_sample", 5000)
-VIS_EVERY = getattr(args, "vis_every", 0)  # 0 表示只在最后可视化
+VIS_EVERY = getattr(args, "vis_every", 0)  
 
-# 训练
+
 for epoch in range(epoch_no):
     if (epoch + 1) % 50 == 0:
         os.makedirs('saved_model', exist_ok=True)
@@ -255,7 +254,7 @@ for epoch in range(epoch_no):
     loss_list.append(epoch_loss); loss_r_list.append(epoch_loss_r); loss_s_list.append(epoch_loss_s)
     print('Epoch:', epoch, 'Loss:', epoch_loss, 'Loss_r:', epoch_loss_r, 'Loss_s:', epoch_loss_s)
 
-    # 评测
+
     test_uids = np.arange(adj_norm.shape[0])
     batch_no = int(np.ceil(len(test_uids) / batch_user))
     all_recall_20 = 0.0; all_ndcg_20 = 0.0
@@ -312,4 +311,4 @@ torch.save(optimizer.state_dict(), f'saved_model/saved_optim_{args.data}_{time.s
 
 
 print("Saved visualizations to:", save_vis_dir)
-# ===================== end of main.py =====================
+
