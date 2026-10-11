@@ -4,8 +4,6 @@ import torch.nn.functional as F
 import dgl
 import scipy.sparse as sp
 import networkx as nx
-#from gat import GAT
-#from GAT3 import GAT
 from GAT4 import GAT
 
 
@@ -70,7 +68,7 @@ class S2CL(nn.Module):
             return predictions
 
         else:  # training phase
-            # multi-GAT propagation
+            
             heads = ([self.num_heads] * self.num_layers)
             g = dgl.from_scipy(self.Graph)
             if torch.cuda.is_available():
@@ -78,7 +76,7 @@ class S2CL(nn.Module):
                 g = g.int().to(self.device)
             else:
                 cuda = False
-            # add self loop
+           
             g = dgl.remove_self_loop(g)
             g = dgl.add_self_loop(g)
 
@@ -92,17 +90,17 @@ class S2CL(nn.Module):
                      self.attn_drop,
                      self.negative_slope)
             for layer in range(1, self.l + 1):
-                # GCN propagation
+                
                 self.Z_u_list[layer] = torch.spmm(self.adj_norm, self.E_i_list[layer - 1])
                 self.Z_i_list[layer] = torch.spmm(self.adj_norm.transpose(0, 1), self.E_u_list[layer - 1])
 
-                # svd_adj propagation
+               
 
                 vt_ei = self.vt @ self.E_i_list[layer - 1]
                 self.F_u_list[layer] = (self.u_mul_s @ vt_ei)
                 ut_eu = self.ut @ self.E_u_list[layer - 1]
                 self.F_i_list[layer] = (self.v_mul_s @ ut_eu)
-                # GAT
+                
                 if cuda:
                     ma.cuda()
                     self.E_u_list[layer - 1] = self.E_u_list[layer - 1].cuda()
@@ -118,7 +116,7 @@ class S2CL(nn.Module):
                 self.E_i_list[layer] = self.Z_i_list[layer] + self.E_i_list[layer - 1]
     
 
-            # aggregate across layers
+           
             self.G_u = sum(self.G_u_list)
             self.G_i = sum(self.G_i_list)
             self.E_u = sum(self.E_u_list)
@@ -147,7 +145,7 @@ class S2CL(nn.Module):
             loss_s = -pos_score + neg_score - pos_score1 + neg_score1
             
 
-            # gcn bpr loss
+           
             u_emb = self.E_u[uids]
             pos_emb = self.E_i[pos]
             neg_emb = self.E_i[neg]
@@ -155,20 +153,19 @@ class S2CL(nn.Module):
             neg_scores = (u_emb * neg_emb).sum(-1)
             loss_r = -(pos_scores - neg_scores).sigmoid().log().mean()
 
-            # reg loss
+         
             loss_reg = 0
             for param in self.parameters():
                 loss_reg += param.norm(2).square()
             loss_reg *= self.lambda_2
 
-            # total loss
+           
             loss = loss_r + self.lambda_1 * loss_s + loss_reg
             return loss, loss_r, self.lambda_1 * loss_s
     1
     def get_embeddings(self):
             """
-            返回当前模型里几类嵌入，若还未计算到（例如训练刚开始），用 None 占位。
-            E_*：GCN 路径聚合后的表征；G_*：GAT 路径表征；F_*：谱通道（SVD/热核）表征。
+           
             """
             def safe(x):
                 return x.detach().cpu() if x is not None else None
@@ -180,10 +177,10 @@ class S2CL(nn.Module):
                 "G_i": safe(getattr(self, "G_i", None)),
                 "F_u": safe(getattr(self, "F_u", None)),
                 "F_i": safe(getattr(self, "F_i", None)),
-                # 也可以按需要暴露分层表征：
+               
                 # "E_u_list": [safe(x) for x in getattr(self, "E_u_list", [])],
                 # "E_i_list": [safe(x) for x in getattr(self, "E_i_list", [])],
-                # 原始锚点（0-hop 参数）
+               
                 "E0_u": safe(self.E_u_0),
                 "E0_i": safe(self.E_i_0),
                 }
