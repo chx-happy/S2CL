@@ -23,8 +23,7 @@ def parse_args():
     parser.add_argument('--decay', default=0.99, type=float, help='learning rate')
     parser.add_argument('--note', default=None, type=str, help='note')
     parser.add_argument('--q', default=32, type=int, help='rank')
-    #parser.add_argument('--exp_idx', type=int, required=True, choices=[1,2,3,4,5], 
-    #                    help='实验序号（1=0.25, 2=0.5, 3=1, 4=2, 5=4）')
+   
 
     return parser.parse_args()
 
